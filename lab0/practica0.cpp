@@ -131,7 +131,7 @@ int main (int argc, char *argv[])
                 W_Q[i] = 0.001 * (((double)rand() / RAND_MAX) - 0.5);
                 W_V[i] = 0.001 * (((double)rand() / RAND_MAX) - 0.5);
             }
-        inicializacion de las B
+        //inicializacion de las B
         for(int i=0; i<D; i++) 
             {
                 b_K[i] = 0.001 * (((double)rand() / RAND_MAX) - 0.5);
