@@ -145,86 +145,66 @@ int main (int argc, char *argv[])
 
     double t_inicio = get_time(); //inicio cronometro
     double inv_sqrt_D = 1.0 / sqrt((double)D);// precalculamos la raiz de D fuera del parallel para que no se ejecute tantas veces como hilos
-#pragma omp parallel
-{
-    //calculo de q,k,v
-    #pragma omp for schedule(static)
-    for (int n = 0; n < N; n++) 
+    #pragma omp parallel
     {
-        for (int d = 0; d < D; d++) {
-            
-            
-            double val_q = b_Q[d];
-            double val_k = b_K[d];
-            double val_v = b_V[d];
+        #pragma omp for schedule(static)
+        for (int n = 0; n < N; n++)
+        {
+            for (int d = 0; d < D; d++) {
+                double val_q = b_Q[d];
+                double val_k = b_K[d];
+                double val_v = b_V[d];
 
+                for (int l = 0; l < D; l++)
+                {
+                    double x_val = X[n * D + l];
+                    val_q += x_val * W_Q[l * D + d];
+                    val_k += x_val * W_K[l * D + d];
+                    val_v += x_val * W_V[l * D + d];
+                }
 
-            for (int l = 0; l < D; l++) //multiplicacion de matrices
-            {
-                double x_val = X[n * D + l];
-                val_q += x_val * W_Q[l * D + d];
-                val_k += x_val * W_K[l * D + d];
-                val_v += x_val * W_V[l * D + d];
+                Q[n * D + d] = val_q;
+                K[n * D + d] = val_k;
+                V[n * D + d] = val_v;
             }
-
-            Q[n * D + d] = val_q;
-            K[n * D + d] = val_k;
-            V[n * D + d] = val_v;
         }
-    }
 
+        #pragma omp for schedule(static)
+        for(int n = 0; n < N; n++) {
 
-    //calculo de A
-    #pragma omp for schedule(static)
-    for(int n=0; n<N; n++){
-        for(int i=0; i<N; i++){
-            double dot_prod = 0.0;
-            for (int d = 0; d < D; d++) //mmultiplicacion de matrices
-            {
-                dot_prod += Q[n * D + d] * K[i * D + d];
+            for(int i = 0; i < N; i++) {
+                double dot_prod = 0.0;
+                for (int d = 0; d < D; d++)
+                {
+                    dot_prod += Q[n * D + d] * K[i * D + d];
+                }
+                A[n * N + i] = dot_prod * inv_sqrt_D;
             }
-            A[n * N + i] = dot_prod * inv_sqrt_D;
-        }
-    }
-
-
-    //calculo de alpha
-    #pragma omp for schedule(static)
-    for (int n = 0; n < N; n++) {
 
             double suma_fila = 0.0;
-            
             for (int i = 0; i < N; i++) {
                 double valor_original = A[n * N + i];
                 double ex = exp(valor_original);
-                
-                A[n * N + i] = ex; 
-                suma_fila += ex; 
+                A[n * N + i] = ex;
+                suma_fila += ex;
             }
-
 
             double inv_suma = 1.0 / suma_fila;
-            
             for (int i = 0; i < N; i++) {
-                A[n * N + i] *= inv_suma; 
+                A[n * N + i] *= inv_suma;
             }
-        }
 
-
-    //calculo de C
-    #pragma omp for schedule(static)
-    for(int n=0;n < N;n++){
-        for(int d=0;d < D;d++)
-        {
-            double val_salida = 0.0;
-            for (int i = 0; i < N; i++) //multiplicacion de matrices
+            for(int d = 0; d < D; d++)
             {
-                val_salida += A[n * N + i] * V[i * D + d]; 
+                double val_salida = 0.0;
+                for (int i = 0; i < N; i++)
+                {
+                    val_salida += A[n * N + i] * V[i * D + d];
+                }
+                C[n * D + d] = val_salida;
             }
-            C[n * D + d] = val_salida;
         }
     }
-}
     double t_fin = get_time(); // fin de cronometro
     double tiempo_total = t_fin - t_inicio;
 
